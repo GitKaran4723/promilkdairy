@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pad">
+  <div class="card">
+    <h3>Hello, {{ customer.name }}</h3>
+    <div class="muted small">Net (we owe you - you owe us): <strong>₹{{ '%.2f'|format(net) }}</strong></div>
+  </div>
+
+  <div class="card">
+    <h4>Your Recent Transactions</h4>
+    <div class="list">
+      {% for t in txns %}
+      <div class="tx-row">
+        <div>
+          <div class="muted small">{{ t.date_time.strftime('%Y-%m-%d %H:%M') }}</div>
+          <strong>{{ t.milk_type.name }} • {{ '%.2f'|format(t.qty_liters) }} L</strong>
+          <div class="muted small">Fat: {{ t.fat_value or '-' }} • Rate: ₹{{ '%.2f'|format(t.rate_applied) }}</div>
+        </div>
+        <div class="right">₹{{ '%.2f'|format(t.total_amount) }}</div>
+      </div>
+      {% else %}
+      <div class="muted">No transactions found.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

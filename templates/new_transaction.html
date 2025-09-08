@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .pad {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+  }
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+    padding: 2.5rem 2.5rem 2rem 2.5rem;
+    max-width: 400px;
+    width: 100%;
+    transition: box-shadow 0.3s;
+  }
+  .card:hover {
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.22);
+  }
+  .card h3 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #4f46e5;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+  label {
+    font-size: 1rem;
+    color: #6366f1;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+  select, input[type="number"] {
+    padding: 0.7rem 1rem;
+    border: 1.5px solid #c7d2fe;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: #f1f5f9;
+    transition: border 0.2s;
+    outline: none;
+  }
+  select:focus, input[type="number"]:focus {
+    border-color: #6366f1;
+    background: #fff;
+  }
+  button[type="submit"] {
+    margin-top: 0.5rem;
+    padding: 0.9rem 0;
+    background: linear-gradient(90deg, #6366f1 0%, #818cf8 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 8px 0 rgba(99, 102, 241, 0.10);
+    transition: background 0.2s, transform 0.1s;
+  }
+  button[type="submit"]:hover {
+    background: linear-gradient(90deg, #818cf8 0%, #6366f1 100%);
+    transform: translateY(-2px) scale(1.03);
+  }
+</style>
+<div class="pad">
+  <div class="card">
+    <h3>🧾 New Transaction</h3>
+    <form method="post" action="{{ url_for('new_transaction') }}" class="stack">
+      <label for="customer_id">Customer</label>
+      <select name="customer_id" id="customer_id" required>
+        {% for c in customers %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <label for="milk_type_id">Milk Type</label>
+      <select name="milk_type_id" id="milk_type_id" required>
+        {% for m in milk_types %}
+        <option value="{{ m.id }}">{{ m.name }}</option>
+        {% endfor %}
+      </select>
+      <label for="session">Session</label>
+      <select name="session" id="session">
+        <option>Morning</option>
+        <option>Evening</option>
+      </select>
+      <label for="txn_type">Txn Type</label>
+      <select name="txn_type" id="txn_type">
+        <option value="Sell">Sell (customer → us)</option>
+        <option value="Purchase">Purchase (we → customer)</option>
+      </select>
+      <label for="qty_liters">Quantity (liters)</label>
+      <input name="qty_liters" id="qty_liters" type="number" step="0.01" placeholder="Quantity (liters)" required>
+      <label for="fat_value">Fat (optional)</label>
+      <input name="fat_value" id="fat_value" type="number" min="1" max="10" placeholder="Fat (optional)">
+      <button type="submit">Record Transaction</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

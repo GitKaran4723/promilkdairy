@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <title>{{ title or "Milk Diary" }}</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <meta name="theme-color" content="#0b84ff">
+  <script defer src="{{ url_for('static', filename='js/pwa.js') }}"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Roboto', Arial, sans-serif;
+      background: linear-gradient(135deg, #e3f0ff 0%, #f9fcff 100%);
+      min-height: 100vh;
+      color: #222;
+      letter-spacing: 0.01em;
+    }
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      background: linear-gradient(90deg, #0b84ff 60%, #5ee7df 100%);
+      color: #fff;
+      padding: 0 1.2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(11,132,255,0.10);
+      border-bottom-left-radius: 18px;
+      border-bottom-right-radius: 18px;
+      position: sticky;
+      top: 0;
+      z-index: 1001;
+    }
+    .topbar .brand {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      user-select: none;
+      text-shadow: 0 2px 8px rgba(11,132,255,0.10);
+      transition: text-shadow 0.2s;
+    }
+    .topbar .brand:hover {
+      text-shadow: 0 4px 16px rgba(11,132,255,0.18);
+    }
+    .topbar .right .small-btn {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      padding: 6px 18px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s;
+      margin-left: 10px;
+      box-shadow: 0 1px 4px rgba(11,132,255,0.08);
+    }
+    .topbar .right .small-btn:hover {
+      background: #fff;
+      color: #0b84ff;
+    }
+    .main {
+      flex: 1;
+      padding: 1.2rem 0.7rem 90px 0.7rem;
+      max-width: 480px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+      animation: fadeIn 0.7s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(24px);}
+      to { opacity: 1; transform: none;}
+    }
+    .flash-wrap {
+      margin-bottom: 1.2rem;
+    }
+    .flash {
+      padding: 0.8em 1.2em;
+      border-radius: 12px;
+      margin-bottom: 0.7em;
+      font-weight: 500;
+      font-size: 1rem;
+      box-shadow: 0 2px 8px rgba(11,132,255,0.07);
+      animation: fadeIn 0.5s;
+    }
+    .flash.success { background: #e6f9f0; color: #1a7f5a; border-left: 5px solid #1a7f5a;}
+    .flash.error { background: #ffeaea; color: #d32f2f; border-left: 5px solid #d32f2f;}
+    .flash.info { background: #e3f0ff; color: #0b84ff; border-left: 5px solid #0b84ff;}
+    .flash.warning { background: #fffbe6; color: #bfa100; border-left: 5px solid #bfa100;}
+    .bottomnav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 68px;
+      background: rgba(255,255,255,0.98);
+      border-top: 1.5px solid #e0e0e0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 999;
+      box-shadow: 0 -2px 16px rgba(11,132,255,0.07);
+      backdrop-filter: blur(6px);
+      border-top-left-radius: 18px;
+      border-top-right-radius: 18px;
+      max-width: 480px;
+      margin: 0 auto;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .navitem {
+      flex: 1;
+      text-align: center;
+      color: #555;
+      text-decoration: none;
+      font-size: 1.05rem;
+      padding: 8px 0 0 0;
+      transition: color 0.2s, background 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-radius: 12px;
+      margin: 0 2px;
+      position: relative;
+    }
+    .navitem .icon {
+      font-size: 1.5rem;
+      margin-bottom: 2px;
+      filter: drop-shadow(0 2px 8px rgba(11,132,255,0.08));
+      transition: filter 0.2s;
+    }
+    .navitem.active,
+    .navitem:hover {
+      color: #0b84ff;
+      font-weight: 700;
+      background: rgba(11,132,255,0.08);
+    }
+    .navitem.active .icon {
+      filter: drop-shadow(0 4px 16px rgba(11,132,255,0.18));
+    }
+    .navitem .label {
+      font-size: 0.82rem;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    @media (max-width: 600px) {
+      .main { padding-bottom: 100px;}
+      .bottomnav { max-width: 100vw; left: 0; transform: none;}
+    }
+    .fab {
+      position: fixed;
+      right: 32px;
+      bottom: 92px;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0b84ff 60%, #5ee7df 100%);
+      color: #fff;
+      font-size: 2.3rem;
+      border: none;
+      box-shadow: 0 4px 24px rgba(11,132,255,0.22), 0 1.5px 8px rgba(0,0,0,0.09);
+      cursor: pointer;
+      transition: right 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s, box-shadow 0.2s;
+      opacity: 1;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      outline: none;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .fab:active {
+      box-shadow: 0 2px 8px rgba(11,132,255,0.13);
+      background: linear-gradient(135deg, #0b84ff 80%, #5ee7df 100%);
+    }
+    .fab.hide {
+      right: -80px;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .fab.show {
+      right: 32px;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+      background: #e3f0ff;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #b3d6ff;
+      border-radius: 8px;
+    }
+    /* Selection highlight */
+    ::selection {
+      background: #b3d6ff;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="left" onclick="location.href='{{ url_for('dashboard') }}'">
+        <div class="brand">MilkDiary</div>
+      </div>
+      <div class="right">
+        {% if current_user.is_authenticated %}
+        <a class="small-btn" href="{{ url_for('auth.logout') }}">Logout</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-wrap">
+          {% for cat, msg in messages %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <nav class="bottomnav">
+      <a class="navitem{% if request.endpoint == 'dashboard' %} active{% endif %}" href="{{ url_for('dashboard') }}">
+      <span class="icon">🏠</span>
+      <span class="label">Home</span>
+      </a>
+      <a class="navitem{% if request.endpoint == 'customers_list' %} active{% endif %}" href="{{ url_for('customers_list') }}">
+      <span class="icon">👥</span>
+      <span class="label">Customers</span>
+      </a>
+      <a class="navitem{% if request.endpoint == 'transactions' %} active{% endif %}" href="{{ url_for('transactions') }}">
+      <span class="icon">💳</span>
+      <span class="label">Transactions</span>
+      </a>
+      <a class="navitem{% if request.endpoint == 'billing.bills_list' %} active{% endif %}" href="{{ url_for('billing.bills_list') }}">
+      <span class="icon">🧾</span>
+      <span class="label">Bills</span>
+      </a>
+    </nav>
+
+    <button class="fab" id="fabBtn" onclick="location.href='{{ url_for('new_transaction') }}'">＋</button>
+    <script>
+      // Hide FAB when scrolling down, show when scrolling up
+      let lastScroll = 0;
+      const fab = document.getElementById('fabBtn');
+      window.addEventListener('scroll', function() {
+        const currScroll = window.scrollY;
+        if (currScroll > lastScroll + 10) {
+          fab.classList.remove('show');
+          fab.classList.add('hide');
+        } else if (currScroll < lastScroll - 10 || currScroll <= 0) {
+          fab.classList.remove('hide');
+          fab.classList.add('show');
+        }
+        lastScroll = currScroll;
+      });
+      // Initially show
+      fab.classList.add('show');
+    </script>
+  </div>
+</body>
+</html>

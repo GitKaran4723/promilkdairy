@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pad">
+  <div class="card">
+    <h3>Rate Chart</h3>
+    <div class="grid-cols">
+      <div class="chart-card">
+        <h4>🐄 Cow</h4>
+        <table class="chart-table">
+          <tr><th>Fat</th><th>Rate</th></tr>
+          {% for r in cow_rates %}
+            <tr><td>{{ r.fat_value }}</td><td>₹{{ '%.2f'|format(r.rate) }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div class="chart-card">
+        <h4>🐃 Buffalo</h4>
+        <table class="chart-table">
+          <tr><th>Fat</th><th>Rate</th></tr>
+          {% for r in buff_rates %}
+            <tr><td>{{ r.fat_value }}</td><td>₹{{ '%.2f'|format(r.rate) }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

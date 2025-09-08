@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .pad {
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(60, 72, 100, 0.12);
+    padding: 32px 28px 24px 28px;
+    animation: fadeIn 0.7s;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(30px);}
+    to { opacity: 1; transform: translateY(0);}
+  }
+  h3 {
+    font-size: 2rem;
+    letter-spacing: 1px;
+    color: #4f46e5;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .inline-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .inline-form label {
+    font-weight: 500;
+    color: #6366f1;
+  }
+  .inline-form input[type="date"] {
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 1rem;
+    background: #f1f5f9;
+    color: #374151;
+    transition: border 0.2s;
+  }
+  .inline-form input[type="date"]:focus {
+    border: 1.5px solid #6366f1;
+    outline: none;
+  }
+  .inline-form button {
+    background: linear-gradient(90deg, #6366f1 60%, #818cf8 100%);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 18px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+    transition: background 0.2s, transform 0.1s;
+  }
+  .inline-form button:hover {
+    background: linear-gradient(90deg, #4f46e5 60%, #6366f1 100%);
+    transform: translateY(-2px) scale(1.04);
+  }
+  hr {
+    border: none;
+    border-top: 1.5px solid #e0e7ff;
+    margin: 18px 0 18px 0;
+  }
+  .list {
+    margin-top: 10px;
+  }
+  .list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: linear-gradient(90deg, #f1f5f9 80%, #e0e7ff 100%);
+    border-radius: 10px;
+    padding: 18px 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.04);
+    transition: box-shadow 0.2s, transform 0.1s;
+    position: relative;
+  }
+  .list-item:hover {
+    box-shadow: 0 6px 24px rgba(99,102,241,0.13);
+    transform: translateY(-2px) scale(1.01);
+  }
+  .list-item strong {
+    font-size: 1.1rem;
+    color: #3730a3;
+    letter-spacing: 0.5px;
+  }
+  .muted {
+    color: #64748b;
+    opacity: 0.85;
+  }
+  .small {
+    font-size: 0.92em;
+  }
+  .tiny-link {
+    color: #6366f1;
+    text-decoration: none;
+    font-size: 0.98em;
+    margin: 0 2px;
+    transition: color 0.18s;
+    font-weight: 500;
+  }
+  .tiny-link:hover {
+    color: #3730a3;
+    text-decoration: underline;
+  }
+  @media (max-width: 600px) {
+    .card { padding: 18px 6px 14px 6px; }
+    .list-item { flex-direction: column; gap: 8px; }
+    .inline-form { flex-direction: column; gap: 8px; }
+  }
+</style>
+<div class="pad">
+  <div class="card">
+    <h3>🧾 Bills</h3>
+    <form method="post" action="{{ url_for('billing.generate_bills_for_range') }}" class="inline-form">
+      <label>Start</label>
+      <input type="date" name="start_date" required>
+      <label>End</label>
+      <input type="date" name="end_date" required>
+      <button type="submit">Generate</button>
+    </form>
+    <hr>
+    <div class="list">
+      {% for b in bills %}
+      <div class="list-item">
+        <div>
+          <strong>{{ b.customer.name }}</strong>
+          <div class="muted small">📅 {{ b.week_start }} → {{ b.week_end }}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:1.1em; color:#16a34a; font-weight:600;">₹{{ '%.2f'|format(b.total_amount) }}</div>
+          <div class="muted small">🗓️ {{ b.generated_date.strftime('%Y-%m-%d') }}</div>
+          <a class="tiny-link" href="{{ url_for('billing.bill_detail', bill_id=b.id) }}">View</a> •
+          <a class="tiny-link" href="{{ url_for('billing.bill_pdf', bill_id=b.id) }}">PDF</a>
+        </div>
+      </div>
+      {% else %}
+      <div class="muted" style="text-align:center; padding: 30px 0;">No bills yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

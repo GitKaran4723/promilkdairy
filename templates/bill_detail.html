@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  }
+  .pad {
+    padding: 40px 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 90vh;
+  }
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(60, 72, 100, 0.18);
+    padding: 36px 40px 32px 40px;
+    min-width: 370px;
+    max-width: 480px;
+    width: 100%;
+    animation: fadeIn 0.7s;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(30px);}
+    to { opacity: 1; transform: translateY(0);}
+  }
+  h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #3b3b5c;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+  .muted {
+    color: #7b809a;
+  }
+  .small {
+    font-size: 0.98rem;
+  }
+  .day-block {
+    margin-bottom: 18px;
+    padding-bottom: 6px;
+    border-left: 3px solid #6366f1;
+    padding-left: 14px;
+    background: linear-gradient(90deg, #f1f5ff 60%, transparent 100%);
+    border-radius: 7px;
+  }
+  .tx-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    margin: 7px 0;
+    padding: 8px 14px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(99,102,241,0.04);
+    font-size: 1.04rem;
+    transition: background 0.2s;
+  }
+  .tx-row:hover {
+    background: #e0e7ff;
+  }
+  .right {
+    text-align: right;
+    margin-top: 18px;
+    color: #1e293b;
+  }
+  .big {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  .tiny-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 0.98rem;
+    color: #6366f1;
+    text-decoration: none;
+    border-bottom: 1px dashed #6366f1;
+    transition: color 0.2s, border 0.2s;
+  }
+  .tiny-link:hover {
+    color: #4338ca;
+    border-bottom: 1px solid #4338ca;
+  }
+  hr {
+    border: none;
+    border-top: 1.5px solid #e0e7ff;
+    margin: 22px 0;
+  }
+</style>
+<div class="pad">
+  <div class="card">
+    {% if bill %}
+      <h3>Bill — {{ bill.customer.name }}</h3>
+      <div class="muted small">Week: {{ bill.week_start }} → {{ bill.week_end }}</div>
+    {% else %}
+      <h3>Bill (Preview)</h3>
+    {% endif %}
+    <hr>
+    {% if days %}
+      {% for day, txs in days %}
+        <div class="day-block">
+          <div class="muted small">{{ day }}</div>
+          {% for t in txs %}
+            <div class="tx-row">
+              <div>
+                <span style="color:#6366f1;font-weight:500;">{{ t.session }}</span>
+                • <span style="color:#3b3b5c;">{{ t.milk_type.name }}</span>
+                • <span style="color:#0ea5e9;">{{ '%.2f'|format(t.qty_liters) }} L</span>
+                • <span style="color:#f59e42;">Fat: {{ t.fat_value or '-' }}</span>
+              </div>
+              <div style="font-weight:600;color:#059669;">₹{{ '%.2f'|format(t.total_amount) }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+      <hr>
+      {% if bill %}
+        <div class="right big">Total: ₹{{ '%.2f'|format(bill.total_amount) }}</div>
+        <a class="tiny-link" href="{{ url_for('billing.bill_pdf', bill_id=bill.id) }}">Download PDF</a>
+      {% else %}
+        <div class="right big">Total: ₹{{ '%.2f'|format(inline_total) }}</div>
+      {% endif %}
+    {% else %}
+      <div class="muted" style="text-align:center;font-size:1.1rem;">No transactions in this period.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

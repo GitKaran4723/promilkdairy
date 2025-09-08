@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pad">
+  <div class="card">
+    <h3>Today's Summary</h3>
+    <div class="row stats">
+      <div class="stat">
+        <div class="big">{{ stats.today_liters }}</div>
+        <div class="muted">Collected (L)</div>
+      </div>
+      <div class="stat">
+        <div class="big">{{ stats.today_sold }}</div>
+        <div class="muted">Purchased (L)</div>
+      </div>
+      <div class="stat">
+        <div class="big">₹{{ stats.today_revenue }}</div>
+        <div class="muted">Revenue</div>
+      </div>
+    </div>
+  </div>
+<div class="card" style="margin-top: 2rem;">
+  <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: #333;">
+    Quick Actions
+  </h3>
+  <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+    <a href="{{ url_for('transactions') }}" 
+       class="quick-btn"
+       style="flex: 1 1 120px; min-width: 120px; background: linear-gradient(90deg, #3b82f6, #2563eb); color: #fff; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: box-shadow 0.2s; box-shadow: 0 2px 8px rgba(59,130,246,0.08);">
+      <span class="icon" style="font-size: 1.5rem; margin-bottom: 0.5rem;">📝</span>
+      <span class="label" style="font-size: 1rem;">Transactions</span>
+    </a>
+    <a href="{{ url_for('new_transaction') }}" 
+       class="quick-btn"
+       style="flex: 1 1 120px; min-width: 120px; background: linear-gradient(90deg, #22c55e, #16a34a); color: #fff; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: box-shadow 0.2s; box-shadow: 0 2px 8px rgba(34,197,94,0.08);">
+      <span class="icon" style="font-size: 1.5rem; margin-bottom: 0.5rem;">➕</span>
+      <span class="label" style="font-size: 1rem;">Add Entry</span>
+    </a>
+    <a href="{{ url_for('billing.bills_list') }}" 
+       class="quick-btn"
+       style="flex: 1 1 120px; min-width: 120px; background: linear-gradient(90deg, #a78bfa, #7c3aed); color: #fff; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: box-shadow 0.2s; box-shadow: 0 2px 8px rgba(168,139,250,0.08);">
+      <span class="icon" style="font-size: 1.5rem; margin-bottom: 0.5rem;">💰</span>
+      <span class="label" style="font-size: 1rem;">Bills</span>
+    </a>
+    <a href="{{ url_for('rate_chart_view') }}" 
+       class="quick-btn"
+       style="flex: 1 1 120px; min-width: 120px; background: linear-gradient(90deg, #fb923c, #f59e42); color: #fff; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; align-items: center; text-decoration: none; transition: box-shadow 0.2s; box-shadow: 0 2px 8px rgba(251,146,60,0.08);">
+      <span class="icon" style="font-size: 1.5rem; margin-bottom: 0.5rem;">📊</span>
+      <span class="label" style="font-size: 1rem;">Rate Chart</span>
+    </a>
+  </div>
+</div>
+
+</div>
+{% endblock %}

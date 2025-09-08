@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 100%);
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  }
+  .pad {
+    padding: 40px 0;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .card {
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 8px 32px 0 rgba(60, 72, 88, 0.18);
+    padding: 36px 40px 28px 40px;
+    max-width: 540px;
+    width: 100%;
+    transition: box-shadow 0.2s;
+  }
+  .card:hover {
+    box-shadow: 0 12px 40px 0 rgba(60, 72, 88, 0.25);
+  }
+  h3 {
+    font-size: 2.1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #1a2233;
+    letter-spacing: -1px;
+  }
+  .muted {
+    color: #7b8ca6;
+  }
+  .small {
+    font-size: 0.97rem;
+  }
+  .list {
+    margin-top: 22px;
+  }
+  .tx-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: linear-gradient(90deg, #f5f8fa 0%, #f0f4fa 100%);
+    border-radius: 14px;
+    padding: 18px 20px 14px 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 8px 0 rgba(60, 72, 88, 0.06);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .tx-row:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 4px 16px 0 rgba(60, 72, 88, 0.10);
+    background: linear-gradient(90deg, #eaf1fb 0%, #f7fafd 100%);
+  }
+  .tx-row strong {
+    font-size: 1.13rem;
+    color: #2a3550;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin-top: 2px;
+    display: block;
+  }
+  .tx-row .right {
+    text-align: right;
+    min-width: 90px;
+    margin-left: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .tx-row .right .muted {
+    font-size: 1.08rem;
+    color: #1a9c5e;
+    font-weight: 700;
+    letter-spacing: 0.1px;
+    background: #e8f7ef;
+    border-radius: 8px;
+    padding: 6px 12px;
+    display: inline-block;
+    margin-top: 8px;
+  }
+  @media (max-width: 600px) {
+    .card {
+      padding: 18px 8px 14px 8px;
+      max-width: 98vw;
+    }
+    .tx-row {
+      flex-direction: column;
+      padding: 14px 10px 10px 10px;
+    }
+    .tx-row .right {
+      margin-left: 0;
+      margin-top: 8px;
+      align-items: flex-start;
+    }
+  }
+</style>
+<div class="pad">
+  <div class="card">
+    <h3>Transactions</h3>
+    <div class="muted small">Recent entries (Morning/Evening shown)</div>
+    <div class="list">
+      {% for t in txns %}
+      <div class="tx-row">
+        <div>
+          <div class="muted small">{{ t.date_time.strftime('%Y-%m-%d %H:%M') }} • {{ t.session }}</div>
+          <strong>{{ t.customer.name }}</strong>
+          <div class="muted small">{{ t.milk_type.name }} • {{ '%.2f'|format(t.qty_liters) }} L • Fat: {{ t.fat_value or '-' }}</div>
+        </div>
+        <div class="right">
+          <div class="muted">₹{{ '%.2f'|format(t.total_amount) }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="muted" style="text-align:center; margin-top:32px;">No transactions yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

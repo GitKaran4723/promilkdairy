@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  }
+  .pad {
+    max-width: 520px;
+    margin: 40px auto;
+    padding: 0 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 6px 32px rgba(60, 72, 88, 0.12), 0 1.5px 4px rgba(60, 72, 88, 0.08);
+    padding: 32px 28px 28px 28px;
+    transition: box-shadow 0.2s;
+  }
+  .card:hover {
+    box-shadow: 0 12px 48px rgba(60, 72, 88, 0.16), 0 2px 8px rgba(60, 72, 88, 0.10);
+  }
+  h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 18px;
+    color: #3730a3;
+    letter-spacing: -1px;
+  }
+  form.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  form input {
+    padding: 12px 14px;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: #f1f5f9;
+    transition: border 0.2s;
+  }
+  form input:focus {
+    border: 1.5px solid #6366f1;
+    outline: none;
+    background: #fff;
+  }
+  form button {
+    background: linear-gradient(90deg, #6366f1 60%, #818cf8 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.10);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  form button:hover {
+    background: linear-gradient(90deg, #4f46e5 60%, #6366f1 100%);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.16);
+  }
+  hr {
+    border: none;
+    border-top: 1.5px solid #e0e7ff;
+    margin: 24px 0 18px 0;
+  }
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(90deg, #f1f5f9 80%, #e0e7ff 100%);
+    border-radius: 10px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 4px rgba(99, 102, 241, 0.04);
+    transition: box-shadow 0.2s;
+  }
+  .list-item:hover {
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.10);
+    background: linear-gradient(90deg, #e0e7ff 80%, #c7d2fe 100%);
+  }
+  .muted {
+    color: #6b7280;
+  }
+  .small {
+    font-size: 0.98rem;
+    margin-top: 2px;
+  }
+  .tiny {
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+  }
+</style>
+<div class="pad">
+  <div class="card">
+    <h3>Customers</h3>
+    <form method="post" action="{{ url_for('add_customer') }}" class="stack">
+      <input name="name" placeholder="Name" required>
+      <input name="phone" placeholder="Phone">
+      <input name="address" placeholder="Address">
+      <button type="submit">Add Customer</button>
+    </form>
+    <hr>
+    <div class="list">
+      {% for c in customers %}
+      <div class="list-item">
+        <div>
+          <strong>{{ c.name }}</strong>
+          <div class="muted small">{{ c.phone }} • {{ c.address }}</div>
+        </div>
+        <div class="tiny muted">ID: {{ c.id }}</div>
+      </div>
+      {% else %}
+      <div class="muted">No customers yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
