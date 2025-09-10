@@ -244,6 +244,10 @@
       <span class="icon">🏠</span>
       <span class="label">Home</span>
       </a>
+      <a class="navitem{% if request.endpoint == 'rate_chart_view' %} active{% endif %}" href="{{ url_for('rate_chart_view') }}">
+      <span class="icon">📊</span>
+      <span class="label">RateChart</span>
+      </a>
       <a class="navitem{% if request.endpoint == 'customers_list' %} active{% endif %}" href="{{ url_for('customers_list') }}">
       <span class="icon">👥</span>
       <span class="label">Customers</span>
