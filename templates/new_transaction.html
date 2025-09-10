@@ -41,7 +41,7 @@
     font-weight: 600;
     margin-bottom: 0.2rem;
   }
-  select, input[type="number"] {
+  select, input[type="number"], input[type="date"] {
     padding: 0.7rem 1rem;
     border: 1.5px solid #c7d2fe;
     border-radius: 8px;
@@ -50,7 +50,7 @@
     transition: border 0.2s;
     outline: none;
   }
-  select:focus, input[type="number"]:focus {
+  select:focus, input[type="number"]:focus, input[type="date"]:focus {
     border-color: #6366f1;
     background: #fff;
   }
@@ -82,26 +82,35 @@
         <option value="{{ c.id }}">{{ c.name }}</option>
         {% endfor %}
       </select>
+      
       <label for="milk_type_id">Milk Type</label>
       <select name="milk_type_id" id="milk_type_id" required>
         {% for m in milk_types %}
         <option value="{{ m.id }}">{{ m.name }}</option>
         {% endfor %}
       </select>
+      
+      <label for="txn_date">Date</label>
+      <input type="date" id="txn_date" name="txn_date" value="{{ today }}" required>
+      
       <label for="session">Session</label>
       <select name="session" id="session">
         <option>Morning</option>
         <option>Evening</option>
       </select>
+      
       <label for="txn_type">Txn Type</label>
       <select name="txn_type" id="txn_type">
         <option value="Sell">Sell (customer → us)</option>
         <option value="Purchase">Purchase (we → customer)</option>
       </select>
+      
       <label for="qty_liters">Quantity (liters)</label>
       <input name="qty_liters" id="qty_liters" type="number" step="0.01" placeholder="Quantity (liters)" required>
+      
       <label for="fat_value">Fat (optional)</label>
-      <input name="fat_value" id="fat_value" type="number" min="1" max="10" placeholder="Fat (optional)">
+      <input name="fat_value" id="fat_value" type="number" step="0.01" min="3.5" max="11.0" placeholder="Fat (optional)">
+      
       <button type="submit">Record Transaction</button>
     </form>
   </div>

@@ -5,8 +5,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Customer, MilkType, RateChart, Transaction, Bill
 from auth import auth
 from billing import billing
-from datetime import datetime, date
+from datetime import datetime, date, time, timezone
 import os
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 def create_app():
     app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -133,33 +136,89 @@ def create_app():
         if current_user.role != "admin":
             flash("Only admin can record transactions", "error")
             return redirect(url_for("transactions"))
+
         milk_types = MilkType.query.order_by(MilkType.name).all()
         customers = Customer.query.order_by(Customer.name).all()
+
         if request.method == "POST":
-            customer_id = int(request.form.get("customer_id"))
-            milk_type_id = int(request.form.get("milk_type_id"))
-            session = request.form.get("session")
-            qty = float(request.form.get("qty_liters") or 0)
+            # --- parse/validate incoming form data ---
+            try:
+                customer_id = int(request.form.get("customer_id"))
+                milk_type_id = int(request.form.get("milk_type_id"))
+            except (TypeError, ValueError):
+                flash("Invalid customer or milk type selection.", "error")
+                return redirect(url_for("new_transaction"))
+
+            session_val = request.form.get("session") or "Morning"
+
+            # quantity
+            try:
+                qty = float(request.form.get("qty_liters") or 0)
+            except ValueError:
+                flash("Invalid quantity value.", "error")
+                return redirect(url_for("new_transaction"))
+
+            # fat (optional, float)
             fat_raw = request.form.get("fat_value")
-            fat_value = int(fat_raw) if fat_raw else None
+            try:
+                fat_value = float(fat_raw) if fat_raw not in (None, "") else None
+            except ValueError:
+                flash("Invalid fat value.", "error")
+                return redirect(url_for("new_transaction"))
+
             txn_type = request.form.get("txn_type") or "Sell"
+
+            # --- date handling: parse user date as IST, then convert to UTC-naive for DB ---
+            txn_date_str = request.form.get("txn_date")
+            try:
+                if txn_date_str:
+                    # parse date string, assume midnight local IST for that day
+                    parsed_date = datetime.strptime(txn_date_str, "%Y-%m-%d").date()
+                    ist_dt = datetime.combine(parsed_date, time.min).replace(tzinfo=IST)
+                else:
+                    # use current instant in IST
+                    ist_dt = datetime.now(IST)
+
+                # Convert IST-aware datetime to UTC and drop tzinfo so it matches the
+                # existing convention of storing UTC-naive datetimes (default=datetime.utcnow)
+                utc_dt = ist_dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+            except ValueError:
+                flash("Invalid date format. Use YYYY-MM-DD.", "error")
+                return redirect(url_for("new_transaction"))
+
+            # --- compute rate & total ---
             rate = lookup_rate(milk_type_id, fat_value)
             total = round(qty * rate, 2)
+
+            # --- create transaction object (store UTC-naive datetime into date_time) ---
             txn = Transaction(
                 customer_id=customer_id,
                 milk_type_id=milk_type_id,
-                session=session,
+                date_time=utc_dt,       # store UTC-naive datetime for consistency with default
+                session=session_val,
                 qty_liters=qty,
                 fat_value=fat_value,
                 rate_applied=rate,
                 total_amount=total,
                 txn_type=txn_type
             )
+
             db.session.add(txn)
             db.session.commit()
             flash("Transaction recorded", "success")
             return redirect(url_for("transactions"))
-        return render_template("new_transaction.html", milk_types=milk_types, customers=customers)
+
+        # GET: pass today's date in IST to template so the <input type="date"> defaults correctly
+        today_ist = datetime.now(IST).date().strftime("%Y-%m-%d")
+        return render_template(
+            "new_transaction.html",
+            milk_types=milk_types,
+            customers=customers,
+            today=today_ist
+        )
+    
+
 
     @app.cli.command("init-db")
     def init_db():

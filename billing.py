@@ -9,6 +9,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from sqlalchemy import func
+from datetime import timezone
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo("Asia/Kolkata")
 
 billing = Blueprint("billing", __name__, url_prefix="")
 
@@ -116,7 +120,10 @@ def bill_pdf(bill_id):
     c.setFont("Helvetica", 10)
     c.drawString(margin, y, f"Period: {bill.week_start} to {bill.week_end}")
     y -= 5 * mm
-    c.drawString(margin, y, f"Generated on: {bill.generated_date.strftime('%Y-%m-%d %H:%M')}")
+    # convert UTC-naive datetime → IST-aware
+    generated_ist = bill.generated_date.replace(tzinfo=timezone.utc).astimezone(IST)
+
+    c.drawString(margin, y, f"Generated on: {generated_ist.strftime('%Y-%m-%d %H:%M')}")
     y -= 10 * mm
 
     # Table header

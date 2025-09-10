@@ -46,7 +46,7 @@ class Transaction(db.Model):
     date_time = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     session = db.Column(db.String(12), nullable=False)   # Morning / Evening
     qty_liters = db.Column(db.Float, nullable=False)
-    fat_value = db.Column(db.Integer, nullable=True)     # nullable -> default rate used if null
+    fat_value = db.Column(db.Float(precision=1), nullable=True)  # nullable -> default rate used if null, float with 1 decimal
     rate_applied = db.Column(db.Float, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
     txn_type = db.Column(db.String(10), nullable=False)  # Sell (customer→us) / Purchase (we→customer)
