@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, jsonify, render_template, redirect, url_for, flash, request
 from flask_login import LoginManager, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Customer, MilkType, RateChart, Transaction, Bill
@@ -128,6 +128,87 @@ def create_app():
             buff=buff,
             title="Rate Chart"
         )
+    
+    # New route: accept batch JSON
+    @app.route("/transactions/batch", methods=["POST"])
+    @login_required
+    def batch_transactions():
+        if current_user.role != "admin":
+            return jsonify({"error": "Only admin can record transactions."}), 403
+
+        if not request.is_json:
+            return jsonify({"error": "Expected JSON payload."}), 400
+
+        payload = request.get_json()
+        txns = payload.get("transactions")
+        if not isinstance(txns, list) or not txns:
+            return jsonify({"error": "No transactions provided."}), 400
+
+        saved = 0
+        errors = []
+        for idx, t in enumerate(txns):
+            # required fields: customer_id, milk_type_id, txn_date, qty_liters
+            try:
+                customer_id = int(t.get("customer_id"))
+                milk_type_id = int(t.get("milk_type_id"))
+                qty = float(t.get("qty_liters"))
+            except (TypeError, ValueError):
+                errors.append({"index": idx, "error": "Invalid numeric values."})
+                continue
+
+            txn_type = t.get("txn_type") or "Sell"
+            session_val = t.get("session") or "Morning"
+            fat_raw = t.get("fat_value")
+            try:
+                fat_value = float(fat_raw) if fat_raw not in (None, "") else None
+            except ValueError:
+                errors.append({"index": idx, "error": "Invalid fat value."})
+                continue
+
+            # parse date: expecting yyyy-mm-dd (as the form sends)
+            txn_date_str = t.get("txn_date")
+            try:
+                if txn_date_str:
+                    parsed_date = datetime.strptime(txn_date_str, "%Y-%m-%d").date()
+                    # use midnight local IST for that day
+                    ist_dt = datetime.combine(parsed_date, time.min).replace(tzinfo=IST)
+                else:
+                    ist_dt = datetime.now(IST)
+                utc_dt = ist_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            except Exception as e:
+                errors.append({"index": idx, "error": "Invalid date format."})
+                continue
+
+            # lookup rate (implement or reuse your lookup_rate)
+            try:
+                rate = lookup_rate(milk_type_id, fat_value)
+            except Exception as e:
+                errors.append({"index": idx, "error": f"Rate lookup failed: {str(e)}"})
+                continue
+
+            total = round(qty * rate, 2)
+
+            txn = Transaction(
+                customer_id=customer_id,
+                milk_type_id=milk_type_id,
+                date_time=utc_dt,
+                session=session_val,
+                qty_liters=qty,
+                fat_value=fat_value,
+                rate_applied=rate,
+                total_amount=total,
+                txn_type=txn_type
+            )
+            db.session.add(txn)
+            saved += 1
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": "DB commit failed", "details": str(e)}), 500
+
+        return jsonify({"message": f"Saved {saved} transactions.", "errors": errors}), 200
 
 
     @app.route("/transactions/new", methods=["GET", "POST"])
@@ -218,8 +299,95 @@ def create_app():
             today=today_ist
         )
     
+        # route (adapt if you're using a blueprint: @bp.route)
+    @app.route("/transactions/<int:txn_id>/delete", methods=["POST"])
+    @login_required
+    def delete_transaction(txn_id):
+        # Only admin allowed
+        if current_user.role != "admin":
+            return jsonify({"error": "Permission denied."}), 403
 
+        # find transaction
+        txn = Transaction.query.get(txn_id)
+        if not txn:
+            return jsonify({"error": "Transaction not found."}), 404
 
+        # Optionally: add a business rule e.g. prevent deletion of very old transactions
+        # if txn.date_time < datetime.utcnow() - timedelta(days=30):
+        #     return jsonify({"error": "Cannot delete transactions older than 30 days."}), 400
+
+        try:
+            db.session.delete(txn)
+            db.session.commit()
+            return jsonify({"message": "Transaction deleted."}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": "Failed to delete transaction.", "details": str(e)}), 500
+        
+    @app.route("/customers/<int:customer_id>/delete", methods=["POST"])
+    @login_required
+    def delete_customer(customer_id):
+        # only admin allowed
+        if current_user.role != "admin":
+            return jsonify({"error": "Permission denied."}), 403
+
+        # find customer
+        cust = Customer.query.get(customer_id)
+        if not cust:
+            return jsonify({"error": "Customer not found."}), 404
+
+        # read JSON body
+        if not request.is_json:
+            return jsonify({"error": "Invalid request. JSON expected."}), 400
+        payload = request.get_json()
+        confirm_name = (payload.get("confirm_name") or "").strip()
+
+        if not confirm_name:
+            return jsonify({"error": "Confirmation name required."}), 400
+
+        # exact match required (case-sensitive). For case-insensitive use: cust.name.lower() == confirm_name.lower()
+        if confirm_name != cust.name:
+            return jsonify({"error": "Confirmation name does not match."}), 400
+
+        # Optionally: check for dependent transactions before deleting
+        txn_count = Transaction.query.filter_by(customer_id=cust.id).count()
+        if txn_count > 0:
+            # choose policy: prevent delete if transactions exist, or cascade/delete them.
+            return jsonify({"error": f"Customer has {txn_count} transactions. Cannot delete."}), 400
+
+        try:
+            db.session.delete(cust)
+            db.session.commit()
+            return jsonify({"message": "Customer deleted."}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": "Failed to delete customer.", "details": str(e)}), 500
+
+    # Example when using blueprint 'billing' — adjust decorator if using app directly:
+    # @billing.route("/bills/<int:bill_id>/delete", methods=["POST"])
+    @app.route("/billing/<int:bill_id>/delete", methods=["POST"])
+    @login_required
+    def delete_bill(bill_id):
+        # ensure only admin can delete
+        if current_user.role != "admin":
+            return jsonify({"error": "Permission denied."}), 403
+
+        bill = Bill.query.get(bill_id)
+        if not bill:
+            return jsonify({"error": "Bill not found."}), 404
+
+        # Optionally prevent deletion of paid bills
+        if getattr(bill, "is_paid", False):
+            return jsonify({"error": "Paid bills cannot be deleted."}), 400
+
+        try:
+            db.session.delete(bill)
+            db.session.commit()
+            return jsonify({"message": "Bill deleted."}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": "Failed to delete bill.", "details": str(e)}), 500
+        
     @app.cli.command("init-db")
     def init_db():
         with app.app_context():
@@ -249,4 +417,4 @@ def create_app():
 if __name__ == "__main__":
     from werkzeug.security import generate_password_hash
     app = create_app()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", debug=True)

@@ -30,15 +30,9 @@
     color: #1a2233;
     letter-spacing: -1px;
   }
-  .muted {
-    color: #7b8ca6;
-  }
-  .small {
-    font-size: 0.97rem;
-  }
-  .list {
-    margin-top: 22px;
-  }
+  .muted { color: #7b8ca6; }
+  .small { font-size: 0.97rem; }
+  .list { margin-top: 22px; }
   .tx-row {
     display: flex;
     justify-content: space-between;
@@ -70,6 +64,8 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    gap: 8px;
+    align-items: flex-end;
   }
   .tx-row .right .muted {
     font-size: 1.08rem;
@@ -82,29 +78,39 @@
     display: inline-block;
     margin-top: 8px;
   }
+
+  .delete-btn {
+    background: transparent;
+    border: 1px solid #fde2e2;
+    color: #b91c1c;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .delete-btn:hover {
+    background: #fff5f5;
+    transform: translateY(-1px);
+  }
+
   @media (max-width: 600px) {
-    .card {
-      padding: 18px 8px 14px 8px;
-      max-width: 98vw;
-    }
-    .tx-row {
-      flex-direction: column;
-      padding: 14px 10px 10px 10px;
-    }
-    .tx-row .right {
-      margin-left: 0;
-      margin-top: 8px;
-      align-items: flex-start;
-    }
+    .card { padding: 18px 8px 14px 8px; max-width: 98vw; }
+    .tx-row { flex-direction: column; padding: 14px 10px 10px 10px; }
+    .tx-row .right { margin-left: 0; margin-top: 8px; align-items: flex-start; }
   }
 </style>
+
 <div class="pad">
   <div class="card">
     <h3>Transactions</h3>
     <div class="muted small">Recent entries (Morning/Evening shown)</div>
-    <div class="list">
+
+    <div id="flashMessage" style="margin-top:10px; font-weight:600; color:#064e3b;"></div>
+
+    <div class="list" id="txnsList">
       {% for t in txns %}
-      <div class="tx-row">
+      <div class="tx-row" id="txn-{{ t.id }}">
         <div>
           <div class="muted small">{{ t.date_time.strftime('%Y-%m-%d %H:%M') }} • {{ t.session }}</div>
           <strong>{{ t.customer.name }}</strong>
@@ -112,6 +118,11 @@
         </div>
         <div class="right">
           <div class="muted">₹{{ '%.2f'|format(t.total_amount) }}</div>
+
+          <!-- delete button (only visible to admin in markup; server also enforces role) -->
+          {% if current_user.role == 'admin' %}
+          <button class="delete-btn" data-txn-id="{{ t.id }}" aria-label="Delete transaction {{ t.id }}">Delete</button>
+          {% endif %}
         </div>
       </div>
       {% else %}
@@ -120,4 +131,67 @@
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  const txnsList = document.getElementById("txnsList");
+  const flash = document.getElementById("flashMessage");
+
+  // CSRF token support:
+  // If you use Flask-WTF CSRF, put the token in a meta tag in base.html:
+
+  const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  const CSRF_TOKEN = csrfMeta ? csrfMeta.getAttribute('content') : null;
+
+  function showFlash(msg, ok=true){
+    flash.style.color = ok ? "#064e3b" : "#7f1d1d";
+    flash.textContent = msg;
+    setTimeout(()=> { flash.textContent = ""; }, 3500);
+  }
+
+  // click handler delegate for delete buttons
+  txnsList.addEventListener("click", function(e){
+    const btn = e.target.closest(".delete-btn");
+    if(!btn) return;
+    const txnId = btn.dataset.txnId;
+    if(!txnId) return;
+
+    if(!confirm("Delete this transaction? This action cannot be undone.")) return;
+
+    // disable button to prevent double-click
+    btn.disabled = true;
+    btn.textContent = "Deleting...";
+
+    // POST to server endpoint -- we use POST to avoid custom DELETE support in some setups.
+    fetch(`{{ url_for('delete_transaction', txn_id=0) }}`.replace("/0", `/${txnId}`), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // include CSRF if present
+        ...(CSRF_TOKEN ? { "X-CSRFToken": CSRF_TOKEN } : {})
+      },
+      body: JSON.stringify({ confirm: true })
+    }).then(async res => {
+      if(res.ok){
+        // remove element optimistically
+        const el = document.getElementById("txn-"+txnId);
+        if(el) el.remove();
+        const payload = await res.json().catch(()=>({}));
+        showFlash(payload.message || "Transaction deleted.");
+      } else {
+        const err = await res.json().catch(()=>({error: "Server error"}));
+        showFlash(err.error || "Failed to delete transaction.", false);
+        btn.disabled = false;
+        btn.textContent = "Delete";
+      }
+    }).catch(err=>{
+      console.error(err);
+      showFlash("Network error during deletion.", false);
+      btn.disabled = false;
+      btn.textContent = "Delete";
+    });
+  });
+})();
+</script>
+
 {% endblock %}

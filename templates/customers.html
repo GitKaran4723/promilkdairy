@@ -86,36 +86,68 @@
     box-shadow: 0 4px 16px rgba(99, 102, 241, 0.10);
     background: linear-gradient(90deg, #e0e7ff 80%, #c7d2fe 100%);
   }
-  .muted {
-    color: #6b7280;
+  .muted { color: #6b7280; }
+  .small { font-size: 0.98rem; margin-top: 2px; }
+  .tiny { font-size: 0.85rem; letter-spacing: 0.5px; }
+
+  /* delete button */
+  .delete-wrap { display:flex; align-items:center; gap:8px; }
+  .btn-delete {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background: #fff;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight:700;
+    font-size:0.92rem;
   }
-  .small {
-    font-size: 0.98rem;
-    margin-top: 2px;
-  }
-  .tiny {
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
+  .btn-delete svg { width:16px; height:16px; display:block; }
+  .btn-delete:disabled { opacity:0.6; cursor:not-allowed; }
+
+  @media (max-width: 420px) {
+    .card { padding: 22px 14px 18px 14px; }
+    .btn-delete { padding: 7px 9px; font-size:0.9rem; }
   }
 </style>
+
 <div class="pad">
   <div class="card">
     <h3>Customers</h3>
+
     <form method="post" action="{{ url_for('add_customer') }}" class="stack">
       <input name="name" placeholder="Name" required>
       <input name="phone" placeholder="Phone">
       <input name="address" placeholder="Address">
       <button type="submit">Add Customer</button>
     </form>
+
     <hr>
-    <div class="list">
+
+    <div class="list" id="customersList">
       {% for c in customers %}
-      <div class="list-item">
+      <div class="list-item" id="cust-{{ c.id }}" data-cust-name="{{ c.name|e }}">
         <div>
           <strong>{{ c.name }}</strong>
           <div class="muted small">{{ c.phone }} • {{ c.address }}</div>
         </div>
-        <div class="tiny muted">ID: {{ c.id }}</div>
+
+        <div class="delete-wrap">
+          <div class="tiny muted">ID: {{ c.id }}</div>
+
+          {% if current_user.role == 'admin' %}
+          <button class="btn-delete" data-cust-id="{{ c.id }}" aria-label="Delete {{ c.name }}">
+            <!-- trash icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M9 3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4h4a1 1 0 1 1 0 2h-1l-1 13a3 3 0 0 1-3 2.75H8a3 3 0 0 1-3-2.75L4 6H3a1 1 0 1 1 0-2h4v-.5zM9 6v11a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V6H9z" clip-rule="evenodd"/>
+            </svg>
+            Delete
+          </button>
+          {% endif %}
+        </div>
       </div>
       {% else %}
       <div class="muted">No customers yet.</div>
@@ -123,4 +155,90 @@
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  const list = document.getElementById("customersList");
+  // read CSRF token if base.html provides it (we use default('') to avoid Jinja error)
+  const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  const CSRF_TOKEN = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+  function showToast(msg, ok=true){
+    // very small toast: add a temporary inline message under the card
+    const card = document.querySelector('.card');
+    let el = document.getElementById('cust-msg');
+    if(!el){
+      el = document.createElement('div'); el.id = 'cust-msg';
+      el.style.marginTop = '12px'; el.style.fontWeight = '600';
+      card.appendChild(el);
+    }
+    el.style.color = ok ? '#064e3b' : '#7f1d1d';
+    el.textContent = msg;
+    setTimeout(()=> { if(el) el.textContent = ''; }, 3500);
+  }
+
+  list.addEventListener('click', async function(e){
+    const btn = e.target.closest('.btn-delete');
+    if(!btn) return;
+
+    const custId = btn.dataset.custId;
+    if(!custId) return;
+
+    // fetch the displayed name (safe)
+    const item = document.getElementById('cust-'+custId);
+    const displayedName = item ? item.dataset.custName : '';
+
+    // ask user to type the exact customer name for protection
+    const promptMsg = `Type the exact name of the customer to confirm deletion:\n\n${displayedName}`;
+    const typed = prompt(promptMsg, '');
+    if(typed === null) return; // cancelled
+
+    if(typed.trim() === ''){
+      alert('Deletion cancelled — no name entered.');
+      return;
+    }
+
+    if(typed.trim() !== displayedName){
+      alert('Name did not match. Deletion cancelled.');
+      return;
+    }
+
+    if(!confirm('This will permanently delete the customer. Proceed?')) return;
+
+    // disable button while request in progress
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.textContent = 'Deleting...';
+
+    try {
+      const res = await fetch(`{{ url_for('delete_customer', customer_id=0) }}`.replace('/0', `/${custId}`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(CSRF_TOKEN ? { 'X-CSRFToken': CSRF_TOKEN } : {})
+        },
+        body: JSON.stringify({ confirm_name: typed.trim() })
+      });
+
+      const data = await res.json().catch(()=>({}));
+
+      if(res.ok){
+        // remove element from DOM
+        if(item) item.remove();
+        showToast(data.message || 'Customer deleted.');
+      } else {
+        const err = data.error || 'Failed to delete customer.';
+        showToast(err, false);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    } catch(err){
+      console.error(err);
+      showToast('Network error while deleting.', false);
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  });
+})();
+</script>
 {% endblock %}

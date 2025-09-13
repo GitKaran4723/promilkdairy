@@ -11,6 +11,8 @@ from reportlab.pdfgen import canvas
 from sqlalchemy import func
 from datetime import timezone
 from zoneinfo import ZoneInfo
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -102,8 +104,14 @@ def bill_pdf(bill_id):
     # Company header
     y = height - margin
     c.setFillColorRGB(0.1, 0.3, 0.6)
-    c.setFont("Helvetica-Bold", 20)
-    c.drawCentredString(width / 2, y, "MILK DIARY PRIVATE LIMITED")
+    # Try to use a calligraphic font for the header if available, else fallback
+    try:
+        # Path to a calligraphic font file (adjust path as needed)
+        pdfmetrics.registerFont(TTFont('GreatVibes', 'GreatVibes-Regular.ttf'))
+        c.setFont("GreatVibes", 28)
+    except Exception:
+        c.setFont("Helvetica-Bold", 20)
+    c.drawCentredString(width / 2, y, "JAI HANUMAN MILK DAIRY")
     y -= 10 * mm
 
     # Stylish separator
@@ -188,11 +196,11 @@ def bill_pdf(bill_id):
     y = margin
     c.setFont("Helvetica-Oblique", 9)
     c.setFillColorRGB(0.4, 0.4, 0.4)
-    c.drawCentredString(width / 2, y, "Thank you for choosing Milk Diary Pvt Ltd.")
+    c.drawCentredString(width / 2, y, "Thank you for choosing Jai Hanuman Milk Dairy.")
     y -= 12
     c.setFillColorRGB(0.2, 0.2, 0.2)
     c.setFont("Helvetica", 8)
-    c.drawCentredString(width / 2, y, "Developed & Maintained by Dhiyug Solutions")
+    c.drawCentredString(width / 2, y, "Developed & Maintained by Karan Jadhav")
 
     c.showPage()
     c.save()
@@ -237,6 +245,7 @@ def group_transactions_by_day(txns):
         day = t.date_time.date()
         daily.setdefault(day, []).append(t)
     return sorted(daily.items(), key=lambda x: x[0])
+
 
 @billing.route("/customer/portal")
 @login_required

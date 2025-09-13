@@ -117,15 +117,34 @@
     color: #3730a3;
     text-decoration: underline;
   }
+
+  /* delete button */
+  .btn-delete {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background: #fff;
+    border: 1px solid #fee2e2;
+    color: #b91c1c;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight:700;
+    font-size:0.92rem;
+  }
+  .btn-delete svg { width:16px; height:16px; display:block; }
+  .btn-delete:disabled { opacity:0.6; cursor:not-allowed; }
+
   @media (max-width: 600px) {
     .card { padding: 18px 6px 14px 6px; }
-    .list-item { flex-direction: column; gap: 8px; }
-    .inline-form { flex-direction: column; gap: 8px; }
+    .list-item { flex-direction: column; gap: 10px; }
   }
 </style>
+
 <div class="pad">
   <div class="card">
     <h3>🧾 Bills</h3>
+
     <form method="post" action="{{ url_for('billing.generate_bills_for_range') }}" class="inline-form">
       <label>Start</label>
       <input type="date" name="start_date" required>
@@ -133,10 +152,14 @@
       <input type="date" name="end_date" required>
       <button type="submit">Generate</button>
     </form>
+
     <hr>
-    <div class="list">
+
+    <div id="messages" style="margin-bottom:10px; font-weight:600;"></div>
+
+    <div class="list" id="billsList">
       {% for b in bills %}
-      <div class="list-item">
+      <div class="list-item" id="bill-{{ b.id }}" data-cust-name="{{ b.customer.name|e }}">
         <div>
           <strong>{{ b.customer.name }}</strong>
           <div class="muted small">📅 {{ b.week_start }} → {{ b.week_end }}</div>
@@ -146,6 +169,17 @@
           <div class="muted small">🗓️ {{ b.generated_date.strftime('%Y-%m-%d') }}</div>
           <a class="tiny-link" href="{{ url_for('billing.bill_detail', bill_id=b.id) }}">View</a> •
           <a class="tiny-link" href="{{ url_for('billing.bill_pdf', bill_id=b.id) }}">PDF</a>
+          {% if current_user.role == 'admin' %}
+          <div style="margin-top:8px;">
+            <button class="btn-delete" data-bill-id="{{ b.id }}" aria-label="Delete bill {{ b.id }}">
+              <!-- trash SVG -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M9 3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4h4a1 1 0 1 1 0 2h-1l-1 13a3 3 0 0 1-3 2.75H8a3 3 0 0 1-3-2.75L4 6H3a1 1 0 1 1 0-2h4v-.5zM9 6v11a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V6H9z" clip-rule="evenodd"/>
+              </svg>
+              Delete
+            </button>
+          </div>
+          {% endif %}
         </div>
       </div>
       {% else %}
@@ -154,4 +188,71 @@
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  const billsList = document.getElementById('billsList');
+  const messages = document.getElementById('messages');
+
+  // read CSRF token from meta if present
+  const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  const CSRF_TOKEN = csrfMeta ? csrfMeta.getAttribute('content') : '';
+
+  function showMessage(msg, ok=true){
+    messages.style.color = ok ? '#064e3b' : '#7f1d1d';
+    messages.textContent = msg;
+    setTimeout(()=> { messages.textContent = ''; }, 3500);
+  }
+
+  billsList.addEventListener('click', async function(e){
+    const btn = e.target.closest('.btn-delete');
+    if(!btn) return;
+    const billId = btn.dataset.billId;
+    if(!billId) return;
+
+    const item = document.getElementById('bill-' + billId);
+    const custName = item ? item.dataset.custName : '';
+
+    // single confirm dialog (no name typing)
+    if(!confirm(`Are you sure you want to permanently delete the bill for "${custName}"?`)) return;
+
+    // disable UI
+    btn.disabled = true;
+    const origInner = btn.innerHTML;
+    btn.textContent = 'Deleting...';
+
+    try {
+      const res = await fetch(`{{ url_for('delete_bill', bill_id=0) }}`.replace('/0', `/${billId}`), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(CSRF_TOKEN ? { 'X-CSRFToken': CSRF_TOKEN } : {})
+        },
+        // send an empty body or small payload; server will not require name now
+        body: JSON.stringify({})
+      });
+
+      const data = await res.json().catch(()=>({}));
+
+      if(res.ok){
+        if(item) item.remove();
+        showMessage(data.message || 'Bill deleted.');
+      } else {
+        const err = data.error || 'Failed to delete bill.';
+        console.error('Delete failed:', res.status, data);
+        showMessage(err, false);
+        btn.disabled = false;
+        btn.innerHTML = origInner;
+      }
+    } catch(err){
+      console.error('Network / JS error during delete:', err);
+      showMessage('Network error while deleting. See console for details.', false);
+      btn.disabled = false;
+      btn.innerHTML = origInner;
+    }
+  });
+})();
+</script>
+
+
 {% endblock %}
